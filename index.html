@@ -2,155 +2,145 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Checkout + Struk Mini</title>
+<title>Struk Indomaret + Biaya</title>
 <style>
-body{
-  font-family:Arial, sans-serif;
-  background:#f4f4f4;
-  padding:20px;
-}
-
-button{
-  padding:10px;
-  border:none;
-  background:#111;
-  color:#fff;
-  cursor:pointer;
-  width:100%;
-  margin-top:8px;
-}
-
-#checkout{
-  max-width:420px;
+body{background:#eee;font-family:monospace}
+#receipt{
+  width:58mm;
   background:#fff;
-  padding:15px;
-  margin:auto;
-  border-radius:6px;
-}
-
-.row{
-  display:flex;
-  justify-content:space-between;
-  margin:4px 0;
-}
-
-hr{border:none;border-top:1px dashed #aaa}
-
-#miniReceipt{
-  margin-top:15px;
-  font-family:monospace;
+  padding:8px;
+  margin:20px auto;
   font-size:12px;
 }
-
-/* PRINT STRUK */
+.center{text-align:center}
+.row{display:flex;justify-content:space-between}
+.line{border-top:1px dashed #000;margin:6px 0}
+.big{font-weight:bold;font-size:14px}
 @media print{
   body *{visibility:hidden}
-  #miniReceipt, #miniReceipt *{
-    visibility:visible;
-  }
-  #miniReceipt{
-    position:absolute;
-    left:0;
-    top:0;
-    width:58mm;
-  }
+  #receipt,#receipt *{visibility:visible}
+  #receipt{position:absolute;top:0;left:0}
 }
 </style>
 </head>
 <body>
 
-<div id="checkout">
-  <h3>Checkout</h3>
+<div id="receipt">
+  <div class="center big">INDOMARET</div>
+  <div class="center">PT. Indomarco Prismatama</div>
+  <div class="center">STORE NO. 12345</div>
+  <div class="center">JL. ONLINE NO. 1</div>
+
+  <div class="line"></div>
+
+  <div>No Struk : <span id="noStruk"></span></div>
+  <div>Tgl      : <span id="tgl"></span></div>
+  <div>Kasir    : <span id="kasir"></span></div>
+  <div>Buyer    : <span id="buyer"></span></div>
+
+  <div class="line"></div>
 
   <div id="items"></div>
-  <hr>
-  <div class="row">
-    <strong>Total</strong>
-    <strong id="total"></strong>
+
+  <div class="line"></div>
+
+  <div class="row"><span>SUB TOTAL</span><span id="subTotal"></span></div>
+  <div class="row"><span>DISKON</span><span id="diskon"></span></div>
+  <div class="row"><span>BIAYA ADMIN</span><span id="admin"></span></div>
+  <div class="row"><span>PAJAK</span><span id="pajak"></span></div>
+
+  <div class="line"></div>
+
+  <div class="row big"><span>GRAND TOTAL</span><span id="grand"></span></div>
+  <div class="row"><span>TUNAI</span><span id="tunai"></span></div>
+  <div class="row"><span>KEMBALI</span><span id="kembali"></span></div>
+
+  <div class="line"></div>
+
+  <div class="center">
+    TERIMA KASIH<br>
+    SELAMAT BELANJA KEMBALI
   </div>
 
-  <!-- STRUK MINI -->
-  <div id="miniReceipt">
-    <center>
-      <strong>TAKINASHOP</strong><br>
-      Kasir: <span id="cashierName"></span><br>
-      <span id="receiptDate"></span><br>
-      No. Struk: <span id="receiptNumber"></span>
-    </center>
+  <div class="line"></div>
 
-    <hr>
-    <div id="receiptItems"></div>
-    <hr>
-
-    <div class="row">
-      <strong>TOTAL</strong>
-      <strong id="receiptTotal"></strong>
-    </div>
-
-    <hr>
-    <center>
-      <svg id="receiptBarcode"></svg>
-    </center>
+  <div class="center">
+    <svg id="barcode"></svg>
   </div>
-
-  <button onclick="window.print()">🖨️ Cetak Struk</button>
 </div>
+
+<button onclick="window.print()" style="width:58mm;margin:auto;display:block">
+  🖨️ CETAK STRUK
+</button>
 
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script>
-// ===== DATA DUMMY PRODUK =====
-const PRODUCTS = [
-  {id:1,name:"Script Seller",price:25000},
-  {id:2,name:"Murid Nokos",price:10000}
+// =================== DATA ===================
+const ITEMS = [
+  {name:"Script Seller", qty:1, price:25000},
+  {name:"Murid Nokos", qty:2, price:10000}
 ];
 
-// ===== KASIR RANDOM =====
-const CASHIERS = ["Andi","Budi","Siti","Rina","Doni","Ayu"];
-const cashier = CASHIERS[Math.floor(Math.random()*CASHIERS.length)];
+const BUYER_NAME = "AKHMAD";
+const CASHIERS = ["ANI","BUDI","SITI","RINA"];
+const kasir = CASHIERS[Math.floor(Math.random()*CASHIERS.length)];
 
-// ===== STRUK NUMBER =====
-const RECEIPT_KEY = "receipt_no";
-let receiptNo = parseInt(localStorage.getItem(RECEIPT_KEY)||"0")+1;
-localStorage.setItem(RECEIPT_KEY,receiptNo);
+// ===== BIAYA =====
+const DISKON = 5000;        // potongan
+const BIAYA_ADMIN = 2000;  // admin
+const PAJAK_PERSEN = 5;    // %
 
-// ===== RENDER =====
-let total = 0;
-const itemsEl = document.getElementById("items");
-const receiptItems = document.getElementById("receiptItems");
+const KEY="receipt_no";
+let no=parseInt(localStorage.getItem(KEY)||"0")+1;
+localStorage.setItem(KEY,no);
 
-PRODUCTS.forEach(p=>{
-  total += p.price;
-  itemsEl.innerHTML += `
-    <div class="row">
-      <span>${p.name}</span>
-      <span>${rupiah(p.price)}</span>
-    </div>`;
-  receiptItems.innerHTML += `
-    <div class="row">
-      <span>${p.name}</span>
-      <span>${rupiah(p.price)}</span>
-    </div>`;
-});
+// =================== HEADER ===================
+document.getElementById("noStruk").innerText=String(no).padStart(6,"0");
+document.getElementById("kasir").innerText=kasir;
+document.getElementById("buyer").innerText=BUYER_NAME;
 
-document.getElementById("total").innerText = rupiah(total);
-document.getElementById("receiptTotal").innerText = rupiah(total);
-document.getElementById("cashierName").innerText = cashier;
-document.getElementById("receiptNumber").innerText =
-  String(receiptNo).padStart(6,"0");
-
-const now = new Date();
-document.getElementById("receiptDate").innerText =
+const now=new Date();
+document.getElementById("tgl").innerText=
   now.toLocaleDateString("id-ID")+" "+now.toLocaleTimeString("id-ID");
 
-// ===== BARCODE =====
-JsBarcode("#receiptBarcode",
-  String(receiptNo).padStart(6,"0"),
+// =================== ITEMS ===================
+let subTotal=0;
+const itemsEl=document.getElementById("items");
+
+ITEMS.forEach(i=>{
+  const sub=i.qty*i.price;
+  subTotal+=sub;
+  itemsEl.innerHTML+=`
+    <div>${i.name}</div>
+    <div class="row">
+      <span>${i.qty} x ${rupiah(i.price)}</span>
+      <span>${rupiah(sub)}</span>
+    </div>
+  `;
+});
+
+// =================== HITUNGAN ===================
+const pajak = Math.round(subTotal * PAJAK_PERSEN / 100);
+const grandTotal = subTotal - DISKON + BIAYA_ADMIN + pajak;
+
+// =================== RENDER ===================
+document.getElementById("subTotal").innerText=rupiah(subTotal);
+document.getElementById("diskon").innerText="-"+rupiah(DISKON);
+document.getElementById("admin").innerText=rupiah(BIAYA_ADMIN);
+document.getElementById("pajak").innerText=rupiah(pajak);
+document.getElementById("grand").innerText=rupiah(grandTotal);
+document.getElementById("tunai").innerText=rupiah(grandTotal);
+document.getElementById("kembali").innerText=rupiah(0);
+
+// =================== BARCODE ===================
+JsBarcode("#barcode",
+  String(no).padStart(6,"0"),
   {format:"CODE128",width:2,height:40,displayValue:false}
 );
 
-// ===== UTIL =====
+// =================== UTIL ===================
 function rupiah(n){
-  return "Rp "+n.toLocaleString("id-ID");
+  return "Rp"+n.toLocaleString("id-ID");
 }
 </script>
 
