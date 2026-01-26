@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Checkout + Struk Mini</title>
+<style>
+body{
+  font-family:Arial, sans-serif;
+  background:#f4f4f4;
+  padding:20px;
+}
+
+button{
+  padding:10px;
+  border:none;
+  background:#111;
+  color:#fff;
+  cursor:pointer;
+  width:100%;
+  margin-top:8px;
+}
+
+#checkout{
+  max-width:420px;
+  background:#fff;
+  padding:15px;
+  margin:auto;
+  border-radius:6px;
+}
+
+.row{
+  display:flex;
+  justify-content:space-between;
+  margin:4px 0;
+}
+
+hr{border:none;border-top:1px dashed #aaa}
+
+#miniReceipt{
+  margin-top:15px;
+  font-family:monospace;
+  font-size:12px;
+}
+
+/* PRINT STRUK */
+@media print{
+  body *{visibility:hidden}
+  #miniReceipt, #miniReceipt *{
+    visibility:visible;
+  }
+  #miniReceipt{
+    position:absolute;
+    left:0;
+    top:0;
+    width:58mm;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="checkout">
+  <h3>Checkout</h3>
+
+  <div id="items"></div>
+  <hr>
+  <div class="row">
+    <strong>Total</strong>
+    <strong id="total"></strong>
+  </div>
+
+  <!-- STRUK MINI -->
+  <div id="miniReceipt">
+    <center>
+      <strong>TAKINASHOP</strong><br>
+      Kasir: <span id="cashierName"></span><br>
+      <span id="receiptDate"></span><br>
+      No. Struk: <span id="receiptNumber"></span>
+    </center>
+
+    <hr>
+    <div id="receiptItems"></div>
+    <hr>
+
+    <div class="row">
+      <strong>TOTAL</strong>
+      <strong id="receiptTotal"></strong>
+    </div>
+
+    <hr>
+    <center>
+      <svg id="receiptBarcode"></svg>
+    </center>
+  </div>
+
+  <button onclick="window.print()">🖨️ Cetak Struk</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+// ===== DATA DUMMY PRODUK =====
+const PRODUCTS = [
+  {id:1,name:"Script Seller",price:25000},
+  {id:2,name:"Murid Nokos",price:10000}
+];
+
+// ===== KASIR RANDOM =====
+const CASHIERS = ["Andi","Budi","Siti","Rina","Doni","Ayu"];
+const cashier = CASHIERS[Math.floor(Math.random()*CASHIERS.length)];
+
+// ===== STRUK NUMBER =====
+const RECEIPT_KEY = "receipt_no";
+let receiptNo = parseInt(localStorage.getItem(RECEIPT_KEY)||"0")+1;
+localStorage.setItem(RECEIPT_KEY,receiptNo);
+
+// ===== RENDER =====
+let total = 0;
+const itemsEl = document.getElementById("items");
+const receiptItems = document.getElementById("receiptItems");
+
+PRODUCTS.forEach(p=>{
+  total += p.price;
+  itemsEl.innerHTML += `
+    <div class="row">
+      <span>${p.name}</span>
+      <span>${rupiah(p.price)}</span>
+    </div>`;
+  receiptItems.innerHTML += `
+    <div class="row">
+      <span>${p.name}</span>
+      <span>${rupiah(p.price)}</span>
+    </div>`;
+});
+
+document.getElementById("total").innerText = rupiah(total);
+document.getElementById("receiptTotal").innerText = rupiah(total);
+document.getElementById("cashierName").innerText = cashier;
+document.getElementById("receiptNumber").innerText =
+  String(receiptNo).padStart(6,"0");
+
+const now = new Date();
+document.getElementById("receiptDate").innerText =
+  now.toLocaleDateString("id-ID")+" "+now.toLocaleTimeString("id-ID");
+
+// ===== BARCODE =====
+JsBarcode("#receiptBarcode",
+  String(receiptNo).padStart(6,"0"),
+  {format:"CODE128",width:2,height:40,displayValue:false}
+);
+
+// ===== UTIL =====
+function rupiah(n){
+  return "Rp "+n.toLocaleString("id-ID");
+}
+</script>
+
+</body>
+</html>
