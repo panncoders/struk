@@ -2,41 +2,155 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Struk Indomaret + Biaya</title>
+<title>Create Struk Testimoni</title>
+
+<!-- BARCODE LIB -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
 <style>
-body{background:#eee;font-family:monospace}
-#receipt{
-  width:58mm;
-  background:#fff;
-  padding:8px;
-  margin:20px auto;
+:root{
+  --primary:#5b3cc4;
+  --bg:#f4f6fb;
+  --card:#fff;
+  --text:#222;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--bg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+}
+
+.wrapper{
+  max-width:1050px;
+  margin:30px auto;
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:24px;
+}
+
+.card{
+  background:var(--card);
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 12px 30px rgba(0,0,0,.08);
+}
+
+h3,h4{margin:0 0 12px}
+
+label{
+  font-size:13px;
+  font-weight:600;
+  margin-top:10px;
+  display:block;
+}
+
+input{
+  width:100%;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  font-size:14px;
+}
+
+button{
+  padding:10px 14px;
+  border:none;
+  border-radius:8px;
+  background:var(--primary);
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+}
+
+button.secondary{
+  background:#ebe7fb;
+  color:var(--primary);
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  margin-top:16px;
+}
+
+.item-row{
+  display:grid;
+  grid-template-columns:1.5fr .6fr 1fr;
+  gap:8px;
+  margin-bottom:8px;
+}
+
+/* STRUK */
+.receipt{
   font-size:12px;
 }
+
 .center{text-align:center}
 .row{display:flex;justify-content:space-between}
-.line{border-top:1px dashed #000;margin:6px 0}
-.big{font-weight:bold;font-size:14px}
+.line{border-top:1px dashed #000;margin:8px 0}
+.big{font-weight:700;font-size:14px}
+.small{font-size:11px;color:#444}
+
+svg{max-width:100%}
+
+/* PRINT */
 @media print{
   body *{visibility:hidden}
-  #receipt,#receipt *{visibility:visible}
-  #receipt{position:absolute;top:0;left:0}
+  .receipt,.receipt *{visibility:visible}
+  .receipt{
+    position:absolute;
+    top:0;left:0;
+    width:58mm;
+    box-shadow:none;
+    border-radius:0;
+  }
 }
 </style>
 </head>
+
 <body>
 
-<div id="receipt">
+<div class="wrapper">
+
+<!-- FORM -->
+<div class="card">
+  <h3>🧾 Create Struk Testimoni</h3>
+
+  <label>Nama Buyer</label>
+  <input id="buyer" value="AKHMAD">
+
+  <label>Nama Kasir</label>
+  <input id="kasir" value="ANI">
+
+  <label>Diskon</label>
+  <input id="diskon" type="number" value="5000">
+
+  <label>Biaya Admin</label>
+  <input id="admin" type="number" value="2000">
+
+  <label>Pajak (%)</label>
+  <input id="pajak" type="number" value="5">
+
+  <h4 style="margin-top:16px">Item</h4>
+  <div id="itemsForm"></div>
+
+  <div class="actions">
+    <button class="secondary" onclick="addItem()">➕ Tambah Item</button>
+    <button onclick="generate()">✅ Generate Struk</button>
+  </div>
+</div>
+
+<!-- STRUK -->
+<div class="card receipt" id="receipt">
   <div class="center big">INDOMARET</div>
-  <div class="center">PT. Indomarco Prismatama</div>
-  <div class="center">STORE NO. 12345</div>
-  <div class="center">JL. ONLINE NO. 1</div>
+  <div class="center small">PT. Indomarco Prismatama</div>
 
   <div class="line"></div>
 
-  <div>No Struk : <span id="noStruk"></span></div>
-  <div>Tgl      : <span id="tgl"></span></div>
-  <div>Kasir    : <span id="kasir"></span></div>
-  <div>Buyer    : <span id="buyer"></span></div>
+  <div id="meta"></div>
 
   <div class="line"></div>
 
@@ -44,103 +158,92 @@ body{background:#eee;font-family:monospace}
 
   <div class="line"></div>
 
-  <div class="row"><span>SUB TOTAL</span><span id="subTotal"></span></div>
-  <div class="row"><span>DISKON</span><span id="diskon"></span></div>
-  <div class="row"><span>BIAYA ADMIN</span><span id="admin"></span></div>
-  <div class="row"><span>PAJAK</span><span id="pajak"></span></div>
-
-  <div class="line"></div>
-
-  <div class="row big"><span>GRAND TOTAL</span><span id="grand"></span></div>
-  <div class="row"><span>TUNAI</span><span id="tunai"></span></div>
-  <div class="row"><span>KEMBALI</span><span id="kembali"></span></div>
-
-  <div class="line"></div>
-
-  <div class="center">
-    TERIMA KASIH<br>
-    SELAMAT BELANJA KEMBALI
-  </div>
+  <div id="summary"></div>
 
   <div class="line"></div>
 
   <div class="center">
     <svg id="barcode"></svg>
+    <div class="small" id="barcodeText"></div>
+  </div>
+
+  <div class="line"></div>
+
+  <div class="center small">
+    TERIMA KASIH<br>
+    TESTIMONI ANDA SANGAT BERARTI
   </div>
 </div>
 
-<button onclick="window.print()" style="width:58mm;margin:auto;display:block">
-  🖨️ CETAK STRUK
-</button>
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script>
-// =================== DATA ===================
-const ITEMS = [
-  {name:"Script Seller", qty:1, price:25000},
-  {name:"Murid Nokos", qty:2, price:10000}
-];
+addItem();
 
-const BUYER_NAME = "AKHMAD";
-const CASHIERS = ["ANI","BUDI","SITI","RINA"];
-const kasir = CASHIERS[Math.floor(Math.random()*CASHIERS.length)];
-
-// ===== BIAYA =====
-const DISKON = 5000;        // potongan
-const BIAYA_ADMIN = 2000;  // admin
-const PAJAK_PERSEN = 5;    // %
-
-const KEY="receipt_no";
-let no=parseInt(localStorage.getItem(KEY)||"0")+1;
-localStorage.setItem(KEY,no);
-
-// =================== HEADER ===================
-document.getElementById("noStruk").innerText=String(no).padStart(6,"0");
-document.getElementById("kasir").innerText=kasir;
-document.getElementById("buyer").innerText=BUYER_NAME;
-
-const now=new Date();
-document.getElementById("tgl").innerText=
-  now.toLocaleDateString("id-ID")+" "+now.toLocaleTimeString("id-ID");
-
-// =================== ITEMS ===================
-let subTotal=0;
-const itemsEl=document.getElementById("items");
-
-ITEMS.forEach(i=>{
-  const sub=i.qty*i.price;
-  subTotal+=sub;
-  itemsEl.innerHTML+=`
-    <div>${i.name}</div>
-    <div class="row">
-      <span>${i.qty} x ${rupiah(i.price)}</span>
-      <span>${rupiah(sub)}</span>
-    </div>
+function addItem(){
+  const el=document.createElement("div");
+  el.className="item-row";
+  el.innerHTML=`
+    <input placeholder="Nama Item">
+    <input type="number" value="1">
+    <input type="number" placeholder="Harga">
   `;
-});
+  itemsForm.appendChild(el);
+}
 
-// =================== HITUNGAN ===================
-const pajak = Math.round(subTotal * PAJAK_PERSEN / 100);
-const grandTotal = subTotal - DISKON + BIAYA_ADMIN + pajak;
+function generate(){
+  const noStruk="STR"+Date.now().toString().slice(-8);
+  const noTesti="TST-"+Math.floor(Math.random()*900000+100000);
 
-// =================== RENDER ===================
-document.getElementById("subTotal").innerText=rupiah(subTotal);
-document.getElementById("diskon").innerText="-"+rupiah(DISKON);
-document.getElementById("admin").innerText=rupiah(BIAYA_ADMIN);
-document.getElementById("pajak").innerText=rupiah(pajak);
-document.getElementById("grand").innerText=rupiah(grandTotal);
-document.getElementById("tunai").innerText=rupiah(grandTotal);
-document.getElementById("kembali").innerText=rupiah(0);
+  meta.innerHTML=`
+    NO STRUK : ${noStruk}<br>
+    NO TESTI : ${noTesti}<br>
+    Buyer : ${buyer.value}<br>
+    Kasir : ${kasir.value}<br>
+    Tgl : ${new Date().toLocaleString("id-ID")}
+  `;
 
-// =================== BARCODE ===================
-JsBarcode("#barcode",
-  String(no).padStart(6,"0"),
-  {format:"CODE128",width:2,height:40,displayValue:false}
-);
+  let sub=0;
+  items.innerHTML="";
 
-// =================== UTIL ===================
+  document.querySelectorAll(".item-row").forEach(r=>{
+    const [n,q,p]=r.querySelectorAll("input");
+    if(!n.value) return;
+    const t=q.value*p.value;
+    sub+=t;
+    items.innerHTML+=`
+      <div>${n.value}</div>
+      <div class="row">
+        <span>${q.value} x ${rupiah(p.value)}</span>
+        <span>${rupiah(t)}</span>
+      </div>
+    `;
+  });
+
+  const paj=Math.round(sub*pajak.value/100);
+  const total=sub-diskon.value+ +admin.value+paj;
+
+  summary.innerHTML=`
+    <div class="row"><span>SUB TOTAL</span><span>${rupiah(sub)}</span></div>
+    <div class="row"><span>DISKON</span><span>-${rupiah(diskon.value)}</span></div>
+    <div class="row"><span>ADMIN</span><span>${rupiah(admin.value)}</span></div>
+    <div class="row"><span>PAJAK</span><span>${rupiah(paj)}</span></div>
+    <div class="line"></div>
+    <div class="row big"><span>GRAND TOTAL</span><span>${rupiah(total)}</span></div>
+  `;
+
+  JsBarcode("#barcode", noStruk, {
+    format:"CODE128",
+    width:2,
+    height:40,
+    displayValue:false
+  });
+
+  barcodeText.innerText=noStruk;
+}
+
 function rupiah(n){
-  return "Rp"+n.toLocaleString("id-ID");
+  return "Rp"+Number(n).toLocaleString("id-ID");
 }
 </script>
 
